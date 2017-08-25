@@ -1,0 +1,340 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Functors & Mondads WTF -> FTW</title>
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/black.css">
+
+    <!-- Theme used for syntax highlighting of code -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match(/print-pdf/gi) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName('head')[0].appendChild(link);
+    </script>
+</head>
+<body>
+<div class="reveal">
+    <div class="slides">
+        <section>
+            <h2>Functors & Monads<br><span style="text-decoration: line-through;">WTF</span> FTW</h2>
+        </section>
+        <section>
+            <ol>
+                <li><a href="#/motivation">Motivation</a></li>
+                <li><a href="#/containers">Containers</a></li>
+                <li><a href="#/functors">Functors</a></li>
+                <li><a href="#/maybe">Maybe/Option</a></li>
+                <li><a href="#/applicatives">Applicative Functors</a></li>
+                <li><a href="#/monads">Monads</a></li>
+            </ol>
+        </section>
+
+        <section id="motivation">
+            <section>
+                <h2>Motivation</h2>
+            </section>
+            <section>
+                <h4>FP: Compose programs of <em>pure functions</em>.</h4>
+                <div class="fragment fade-in">
+                    <ul>
+                        <li>Easy to reason about,</li>
+                        <li>reuse,</li>
+                        <li>refactor,</li>
+                        <li>test.</li>
+                    </ul>
+                </div>
+            </section>
+            <section>
+            <pre><code data-trim data-noescape>
+                // imperative
+                let makes = [];
+                for (let i = 0; i < cars.length; i++) {
+                    if (car.ready) {
+                        makes.push(cars[i].make);
+                    }
+                }
+            </code></pre>
+            <pre style="visibility: hidden;"><code data-trim data-noescape>
+                // declarative
+                const makes = cars
+                    .filter(car => car.ready)
+                    .map(car => car.make);
+            </code></pre>
+            </section>
+            <section>
+            <pre><code data-trim data-noescape>
+                // imperative
+                <mark>let</mark> makes = <mark>[]</mark>;
+                for (<mark>let i = 0</mark>; <mark>i < cars.length</mark>; <mark>i++</mark>) {
+                    <mark>if</mark> (car.ready) {
+                        <mark>makes.push</mark>(cars[<mark>[i]</mark>.make);
+                    }
+                }
+            </code></pre>
+            <pre class="fragment fade-up"><code data-trim data-noescape>
+                // declarative
+                const makes = cars
+                    .filter(car => car.ready)
+                    .map(car => car.make);
+            </code></pre>
+            </section>
+            <section>
+                <h4>What about control flow, error handling, async & side effects?</h4>
+                <p>Use containers, functors, applicative functors & monads.</p>
+            </section>
+        </section>
+
+        <section id="containers">
+
+            <section>
+                <h2>Container</h2>
+            </section>
+            <section>
+                <h2>Container in JavaScript</h2>
+                <pre><code data-trim data-noescape="">
+                    const Container = function(x) {
+                      this.__value = x;
+                    };
+
+                    Container.of = x => new Container(x);
+                </code></pre>
+            </section>
+            <section>
+                <h2>Container in Java</h2>
+                <pre><code data-trim data-noescape>
+                    class Container<T> {
+                        private T value;
+
+                        public static <T> Container<T> of(T value) {
+                            return new Container<>(value);
+                        }
+
+                        private Container(T value) {
+                            this.value = value;
+                        }
+                    }
+                </code></pre>
+            </section>
+
+            <section data-background-image="./img/what.gif" data-background-size="contain">
+                <img src="./img/what.gif" alt="What?" style="visibility: hidden;">
+            </section>
+
+            <section>
+                <h2>Container ≙ io.vavr.Value</h2>
+                <pre><code data-trim data-noescape>
+                    package io.vavr;
+
+                    public interface Value<T> {
+                        T get();
+                        T getOrElse(T other);
+                        /* …je suis immutable… */
+                    }
+                </code></pre>
+                <pre class="fragment fade-up"><code data-trim data-noescape data>
+                    public interface Option<T> extends Value<T> { /* … */ }
+                    public interface Future<T> extends Value<T> { /* … */ }
+                    public interface Try<T> extends Value<T> { /* … */ }
+                    public interface Either<L, R> extends Value<R> { /* … */ }
+                    public interface Validation<E, T> extends Value<T> { /* … */ }
+                </code></pre>
+            </section>
+        </section>
+
+        <section id="functors">
+            <section>
+                <h2>Functors</h2>
+            </section>
+            <section>
+                <img src="./img/wikipedia_definition_functors.png" alt="Definition of Functor from Wikipedia">
+            </section>
+            <section data-background-image="./img/accent.gif" data-background-size="contain">
+                <img src="./img/accent.gif" alt="That's a lovely accent you have… New Jersey?" style="visibility: hidden;">
+            </section>
+            <section>
+                <h4>A Functor is a type that implements map and obeys some laws.</h4>
+                <div class="fragment fade-up">
+                    <i>We could have just as easily named it <b>Mappable</b>.</i>
+                </div>
+            </section>
+            <section>
+                <h2>Functor in JavaScript</h2>
+                <pre><code data-trim data-noescape>
+                    // get :: Container c => c a ~> a
+                    Container.prototype.get = function() {
+                        return this.__value;
+                    }
+
+                    <mark>
+                    // map :: Container c => c a ~> (a -> b) -> c b
+                    Container.prototype.map = function(f) {
+                        return Container.of(f(this.__value))
+                    }
+                    </mark>
+                </code></pre>
+
+                <pre class="fragment fade-up"><code data-trim data-noescape>
+                    Container.of('foo')
+                        .map(x => x + 'bar')
+                        .map(x => x.toUppercase)
+                        .get();
+                    // 'FOOBAR'
+                </code></pre>
+            </section>
+            <section>
+                <h2>Functor in Java</h2>
+                <pre><code data-trim data-noescape>
+
+                    &#60;U&#62; Container&#60;U&#62; map(Function<? super T, ? extends U> mapper) {
+                        return Container.of(mapper.apply(value));
+                    }
+                </code></pre>
+
+                <pre class="fragment fade-up"><code data-trim data-noescape>
+                    String result = Container.of("foo")
+                        .map(x -> x + "bar")
+                        .map(String::toUpperCase)
+                        .get();
+                </code></pre>
+            </section>
+            <section>
+                <img src="./img/boring.gif" alt="Boring">
+            </section>
+        </section>
+
+        <section id="option">
+            <section>
+                <h2>Maybe/Option</h2>
+                <p class="fragment fade-up">Option is a monadic container type which represents an optional value. Instances of Option are either an instance of Some or the None.</p>
+            </section>
+            <section>
+                <img src="./img/cat.gif" alt="Schrödinger's cat">
+            </section>
+            <section>
+                <h2>Option in vavr</h2>
+                <pre><code data-trim data-noescape>
+                    public interface Option&#60;T&#62; extends Value&#60;T&#62;, Serializable {
+
+                        default &#60;U&#62; Option&#60;U&#62; map(Function&#60;? super T, ? extends U&#62; mapper) {
+                            return isEmpty()
+                                ? none()
+                                : some(mapper.apply(get()));
+                        }
+
+                    }
+                </code></pre>
+
+                <pre><code data-trim data-noescape>
+                    final class Some&#60;T&#62; implements Option&#60;T&#62;, Serializable {
+                        public boolean isEmpty() { return false; }
+                    }
+
+                    final class None&#60;T&#62; implements Option&#60;T&#62;, Serializable {
+                        public boolean isEmpty() { return true; }
+                    }
+                </code></pre>
+            </section>
+            <section>
+                <h2>vavr Option</h2>
+                <pre><code data-trim data-noescape>
+                    class Foo {
+                        public static Option<String> getBar() { /* … */ }
+                    }
+
+                    String bar = Foo.getBar()
+                        .map(String::toUpperCase)
+                        .getOrElse("BAR");
+                </code></pre>
+            </section>
+            <section>
+                <h2>Option in vavr</h2>
+                <pre><code data-trim data-noescape>
+                    public interface Option&#60;T&#62; extends Value&#60;T&#62;, Serializable {
+
+                        default &#60;U&#62; Option&#60;U&#62; flatMap(Function&#60;? super T, ? extends Option&#60;? extends U&#62;&#62; mapper) {
+                            return isEmpty() ? none() : (Option&#60;U&#62;) mapper.apply(get());
+                        }
+
+                    }
+                </code></pre>
+
+                <pre><code data-trim data-noescape>
+                    class Foo {
+                        public static Option<String> getBar() { /* … */ }
+                    }
+
+                    String bar = Foo.getBar()
+                        .flatMap(bar ->
+                            bar.equals('empty')
+                                ? Option.none()
+                                ? Option.some(bar)
+                        )
+                        .map(String::toUpperCase)
+                        .getOrElse("BAR");
+                </code></pre>
+            </section>
+        </section>
+
+        <section id="applicatives">
+            <section>
+                <h2>Applicative Functors</h2>
+            </section>
+        </section>
+
+        <section id="monads">
+            <section>
+                <h2>Monads</h2>
+            </section>
+        </section>
+
+
+        <section>
+            <h2>Links</h2>
+            <ul>
+                <li><a href="https://github.com/MostlyAdequate/mostly-adequate-guide">Professor Frisby's Mostly Adequate
+                    Guide to Functional Programming</a></li>
+                <li><a href="http://www.vavr.io/vavr-docs/">Vavr</a> <i>/ˈfeɪvə/ </i></li>
+                <li><a href="https://github.com/fantasyland/fantasy-land">Fantasy Land: Algebraic JavaScript
+                    Specification</a></li>
+                <li><a href="http://folktale.origamitower.com/">Folktale: JavaScript FP Standard Library</a></li>
+                <li><a href="http://ramdajs.com/">Ramda</a> & <a href="https://github.com/ramda/ramda-fantasy">ramda-fantasy</a>
+                </li>
+            </ul>
+        </section>
+    </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+  // More info about config & dependencies:
+  // - https://github.com/hakimel/reveal.js#configuration
+  // - https://github.com/hakimel/reveal.js#dependencies
+  Reveal.initialize({
+    history: true,
+    transition: 'fade',
+    dependencies: [
+      {src: 'plugin/markdown/marked.js'},
+      {src: 'plugin/markdown/markdown.js'},
+      {src: 'plugin/notes/notes.js', async: true},
+      {
+        src: 'plugin/highlight/highlight.js', async: true, callback: function () {
+        hljs.initHighlightingOnLoad();
+      }
+      },
+      {src: 'plugin/zoom-js/zoom.js', async: true}
+    ]
+  });
+</script>
+</body>
+</html>
